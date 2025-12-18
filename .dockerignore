@@ -1,0 +1,16 @@
+# Gradle caches and build outputs
+.gradle/
+build/
+**/build/
+out/
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+# VCS
+.git/
+# Node/npm if any
+node_modules/
+# OS junk
+.DS_Store

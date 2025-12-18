@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1.7
+
+# ---- Build stage: produce WAR with Gradle wrapper ----
+FROM docker.io/eclipse-temurin:21-jdk AS build
+WORKDIR /app
+
+# Install necessary tools
+RUN apt-get update -y && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*
+
+# Copy Gradle wrapper and build files first (for better layer caching)
+COPY gradlew gradle/wrapper/gradle-wrapper.properties ./
+COPY settings.gradle ./
+COPY build.gradle ./
+COPY gradle ./gradle
+
+# Copy project sources
+COPY model ./model
+COPY repository ./repository
+COPY web ./web
+COPY buildSrc ./buildSrc
+
+# Ensure wrapper is executable
+RUN chmod +x gradlew
+
+# Build only the web WAR to minimize work
+RUN ./gradlew :web:war --no-daemon
+
+# ---- Runtime stage: Tomcat with deployed WAR ----
+FROM docker.io/library/tomcat:9.0-jdk17-temurin
+
+# Set Tomcat context path to /todo by naming the WAR accordingly
+COPY --from=build /app/web/build/libs/*.war /usr/local/tomcat/webapps/todo.war
+
+EXPOSE 8080
+
+# Health check (optional)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8080/todo/ || exit 1
+
+# Default command
+CMD ["catalina.sh", "run"]

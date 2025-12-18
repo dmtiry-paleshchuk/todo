@@ -1,0 +1,29 @@
+# ---- Build stage: produce uber-jar ----
+FROM docker.io/eclipse-temurin:21-jdk AS build
+WORKDIR /app
+
+# Minimal tools and wrapper
+RUN apt-get update -y && apt-get install -y --no-install-recommends unzip curl && rm -rf /var/lib/apt/lists/*
+COPY gradlew gradle/wrapper/gradle-wrapper.properties ./
+COPY settings.gradle ./
+COPY build.gradle ./
+COPY gradle ./gradle
+
+# Sources
+COPY model ./model
+COPY repository ./repository
+COPY web ./web
+COPY buildSrc ./buildSrc
+
+RUN chmod +x gradlew
+# Build only the web WAR; skip tests to speed up container build
+RUN ./gradlew :web:shadowJar :web:copyRuntimeLibs --no-daemon -x test
+
+# ---- Runtime stage: run uber-jar ----
+FROM docker.io/eclipse-temurin:21-jre
+WORKDIR /opt/app
+COPY --from=build /app/web/build/libs/todo-uber-all.jar /opt/app/app.jar
+COPY --from=build /app/web/build/runtime-libs/ /opt/app/lib/
+EXPOSE 8080
+ENV PORT=8080
+CMD ["java", "-jar", "/opt/app/app.jar"]

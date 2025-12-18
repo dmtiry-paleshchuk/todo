@@ -1,8 +1,11 @@
+plugins {
+    id 'java-library'
+}
 apply from: "$rootDir/gradle/integrationTest.gradle"
 
 dependencies {
-    compile project(':model')
-    testCompile 'junit:junit:4.11'
+    api project(':model')
+    testImplementation 'junit:junit:4.11'
 }
 
 tasks.withType(Test) {

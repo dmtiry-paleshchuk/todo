@@ -1,15 +1,8 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'org.ajoberstar:gradle-jacoco:0.3.0'
-    }
+plugins {
+    id 'jacoco'
 }
 
-apply plugin: org.ajoberstar.gradle.jacoco.plugins.JacocoPlugin
-
-jacoco {
-    integrationTestTaskName = 'integrationTest'
-}
+// Optionally configure Jacoco if needed
+// jacoco {
+//     toolVersion = '0.8.11' // Latest as of Dec 2025
+// }

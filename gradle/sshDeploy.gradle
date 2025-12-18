@@ -1,10 +1,12 @@
 import com.manning.gia.ssh.Scp
 import com.manning.gia.ssh.SshExec
 
-apply from: "$rootDir/gradle/downloadWar.gradle"
+def _requestedTasks = gradle.startParameter.taskNames
+if (_requestedTasks.any { it.contains('deployWar') || it.contains('copyWarToServer') || it.contains('fetchToDoWar') }) {
+    apply from: "$rootDir/gradle/downloadWar.gradle"
+}
 
 ext {
-    warFile = configurations.todo.singleFile
     tomcatRemoteDir = '/opt/apache-tomcat-7.0.42'
 
     userHome = System.properties['user.home']
@@ -20,12 +22,19 @@ dependencies {
     jsch 'org.apache.ant:ant-jsch:1.9.1'
 }
 
-task copyWarToServer(type: Scp, dependsOn: fetchToDoWar) {
+task copyWarToServer(type: Scp) {
     classpath = configurations.jsch
-    sourceFile = warFile
     destination = remoteTmpDir
     keyFile = vagrantKeyFile
     port = config.server.sshPort
+    doFirst {
+        def todoConfig = configurations.findByName('todo')
+        if (todoConfig != null && !todoConfig.empty) {
+            sourceFile = todoConfig.singleFile
+        } else {
+            sourceFile = tasks.named('war').get().archiveFile.get().asFile
+        }
+    }
 }
 
 tasks.withType(SshExec) {
@@ -59,7 +68,7 @@ task deleteOldArtifacts(dependsOn: [deleteTomcatWebappsDir, deleteTomcatWorkDir]
 }
 
 task copyWarToWebappsDir(type: SshExec, dependsOn: deleteOldArtifacts) {
-    command = "sudo -u tomcat cp /tmp/$warFile.name $tomcatRemoteDir/webapps/todo.war"
+    command = "sudo -u tomcat cp /tmp/todo.war $tomcatRemoteDir/webapps/todo.war"
 
     doFirst {
         logger.quiet "Deploying WAR file to Tomcat."

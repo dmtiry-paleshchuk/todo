@@ -1,9 +1,12 @@
+plugins {
+    id 'org.sonarqube' version '4.4.1.3373'
+}
+
 apply from: "$rootDir/gradle/envConfig.gradle"
 apply from: "$rootDir/gradle/versioning.gradle"
-apply plugin: 'sonar-runner'
 
-sonarRunner {
-    sonarProperties {
+sonarqube {
+    properties {
         property 'sonar.projectName', 'todo'
         property 'sonar.projectDescription', 'A task management application'
     }
@@ -12,7 +15,7 @@ sonarRunner {
 allprojects {
     apply plugin: 'idea'
     group = 'com.manning.gia'
-    
+
     repositories {
         mavenCentral()
     }
@@ -20,23 +23,25 @@ allprojects {
 
 subprojects {
     apply plugin: 'java'
-    apply from: "$rootDir/gradle/jacoco.gradle"
-    
-    ext.compatibilityVersion = '1.6'
+    apply plugin: 'jacoco'
+
+    ext.compatibilityVersion = '1.8'
     sourceCompatibility = compatibilityVersion
     targetCompatibility = compatibilityVersion
 
     test {
-        reports.junitXml.destination = file("$reports.junitXml.destination/unit")
+        // Gradle 8: configure JUnit XML report output location using new API
+        reports {
+            junitXml.required.set(true)
+            junitXml.outputLocation.set(file("$buildDir/test-results/unit"))
+        }
     }
 
-    sonarRunner {
-        sonarProperties {
+    sonarqube {
+        properties {
             property 'sonar.sourceEncoding', 'UTF-8'
         }
     }
 }
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '1.7'
-}
+// Wrapper task already exists in Gradle 8+, no need to redefine
